@@ -90,7 +90,6 @@ def network_categorical(input_shape):
     fat = layers.Dense(1, name='Fat')(x1)
     muscle = layers.Dense(1, name='Muscle')(x1)
     
-    outputs = layers.Concatenate(name='outputs')([output_skin, output_fat_muscle])
     model = tf.keras.Model(inputs=[input_img, input_pos, input_ext], outputs=[skin,fat,muscle], name='categorical_network')
     
     return model
@@ -107,7 +106,7 @@ def one_hot(x, size):
     
     return one_hot
 
-def error_function(x_img, x_ctg, y, df, models, categorical):
+def error_function(x_img, x_ctg, y, df, models):
     # x_img: images
     # x_ctg: categorical inputs
     # y: true label
@@ -243,15 +242,15 @@ def fit_network(model, batchsize, epoch, callback_properties,
                                save_best_only=True, save_weights_only=True)
     else:
         callback = None
-            
+    
     if model.name=='categorical_network':            
         
         history = model.fit(x={'Image': x_img_train, 'Extremity': one_hot(x_ctg_train[:,0], size=4), 
                                'Position': one_hot(x_ctg_train[:,1], size=12)}, 
-                            y={'Skin': y_train[:,0], 'Fat': y_train[:,1], 'Muscle': y_train[:2]}, 
+                            y={'Skin': y_train[:,0], 'Fat': y_train[:,1], 'Muscle': y_train[:,2]}, 
                             validation_data=({'Image': x_img_val, 'Extremity': one_hot(x_ctg_val[:,0], size=4),
                                               'Position': one_hot(x_ctg_val[:,1], size=12)}, 
-                                             {'outputs':y_val}),
+                                             {'Skin': y_val[:,0], 'Fat': y_val[:,1], 'Muscle': y_val[:,2]}),
                             steps_per_epoch=len(x_img_train)//batchsize,
                             validation_steps=len(x_img_val)//batchsize,
                             epochs=epoch, callbacks=callback, verbose=2)
@@ -259,8 +258,8 @@ def fit_network(model, batchsize, epoch, callback_properties,
     else:
             
         history = model.fit(x=x_img_train, 
-                            y={'Skin': y_train[:,0], 'Fat': y_train[:,1], 'Muscle': y_train[:2]}, 
-                            validation_data=(x_img_val, y_val),
+                            y={'Skin': y_train[:,0], 'Fat': y_train[:,1], 'Muscle':y_train[:,2]}, 
+                            validation_data=(x_img_val, {'Skin': y_val[:,0], 'Fat': y_val[:,1], 'Muscle': y_val[:,2]}),
                             steps_per_epoch=len(x_img_train)//batchsize,
                             validation_steps=len(x_img_val)//batchsize,
                             epochs=epoch, callbacks=callback, verbose=2)
